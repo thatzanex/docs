@@ -1,0 +1,27 @@
+---
+title: "Party Games"
+description: "Stuhltanz (musical chairs) round controller and the Spin-the-Bottle click minigame."
+---
+
+## Stuhltanz (Musical Chairs)
+
+`ServerScriptService.Game.Games.Stuhltanz.StuhltanzServer` drives one `Controller` object per game-model found under `Workspace.Systems.Stuhltanz`. Each model needs a `Queue/SpectateVisual` (with a `Hitbox` part and a `Base`/`Header` for the live queue counter), a `Chairs` folder, and a `MusicPart.Music` sound.
+
+**Lifecycle:**
+
+1. **Queueing** — a loop (`startQueueLoop`) polls `workspace:GetPartBoundsInBox` against the model's `Hitbox` every `QueueCheckInterval` (default 0.25s) to find waiting players and updates a live "Bereit (n/min)" counter on the queue's billboard.
+2. **Round start** — once enough players are queued (`MinPlayers`, defaulting to the chair count, clamped ≥2), a countdown fires (`Alle bereit?` → `Start in N` → seat everyone round-robin onto chairs).
+3. **Elimination rounds** — each pass removes one chair (`setChairVisible(chair, false)` hides/disables it), plays music for a random `MusicMinSeconds`–`MusicMaxSeconds` window while calling `monitorMovement` (which disqualifies anyone who sits or stops moving for `IdleGraceSeconds`), then stops music and gives players `SeatTimeout` seconds to find a free chair (`waitForSeats`). Anyone left standing is eliminated.
+4. **End** — repeats until one player remains (announced as the winner) or the queue empties; then all effects/chairs reset for the next round.
+
+All player-facing strings are in German (e.g. `"Start in %d"`, `"Musik laeuft - bleib in Bewegung!"`, `"Leider kein Stuhl - du bist raus."`), consistent with the game's German "Jugendtreff" (youth club) theming. Notices are pushed per-player over the `Notice` RemoteEvent (`ReplicatedStorage.Network.Games.StuhltanzNetwork.Remotes`); queue visual state syncs over `QueueEffect`.
+
+Every tunable (min players, countdown length, idle grace period, music duration range, seat-scramble timeout) is read from **Attributes** on the game model (`Controller:config(name, fallback)`), so level designers can retune a round without touching the script.
+
+## Spin the Bottle
+
+`Workspace.Systems.SpinningBottles.SpinHandler` is a small, self-contained script: drop it inside a folder of bottle `MeshPart`s and it wires up a `ClickDetector` on each (existing or new, via `ChildAdded`). Clicking a bottle spins it with an eased-out rotation (5–8 full turns over 3.5–5.5s, `1 - (1-progress)^3` easing) ending at a random final `Y` orientation. Concurrent spins on the same bottle are guarded by an `activeSpins` set.
+
+<Note>
+  This is a generic "spin the bottle" prop script — it only rotates the mesh and has no built-in dare/prompt/pairing logic. Any game-specific behavior triggered by the result is not part of this script.
+</Note>

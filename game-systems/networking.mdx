@@ -1,0 +1,37 @@
+---
+title: "Networking Layout"
+description: "How ReplicatedStorage.Network is organized, one sub-folder per system."
+---
+
+## Convention
+
+Rather than a flat pile of RemoteEvents, this project namespaces all client/server communication under `ReplicatedStorage.Network.<System>`, each with its own `Remotes` (and often `Modules`/`Assets`/`Libraries`) sub-folder. This keeps ownership obvious and avoids naming collisions.
+
+```
+ReplicatedStorage.Network
+├── Character/            -- StateBillboardNetwork, default character assets
+├── Overhead/              -- Modules, Remotes, Assets, Libraries, Styles (15 nametag styles)
+├── Stats/                 -- Modules, Remotes
+├── Notify/                -- Config, Template, fromServer (RemoteEvent), clientBindable
+├── Sound/                 -- Comm, Register (both RemoteEvents)
+├── Games/
+│   └── StuhltanzNetwork/  -- Remotes (Notice, QueueEffect), Assets, Modules
+└── Fun/                   -- TouchGrass (RemoteEvent)
+```
+
+Additional top-level, non-namespaced shared state lives directly under `ReplicatedStorage`:
+
+- **`Data.ClientDataApi`** — read-only player data access (see [Player Data Layer](/game-systems/data-layer)).
+- **`SharedStorage`** — `Lighting` (Server/Client preset folders) and `Enviroment` assets shared between local scripts and the server.
+- **`Libraries.CountryService`** — flag/emoji lookup (see [Country Service](/game-systems/country-service)).
+- **`Api`** — `OverheadClient`, `CosmeticClient` (client-facing read APIs).
+- **`IntroFinished`** (RemoteEvent) — signals when a client's intro sequence has completed.
+- **`FetchDataRemote`** — created lazily by `DataApi` the first time it's needed.
+
+## RemoteEvent vs RemoteFunction usage
+
+The codebase is consistent about *when* each is used:
+
+- **RemoteFunction** for request/response reads the client needs an immediate answer to: `FetchDataRemote`, `GetTitles`, `RequestStyleChange`, `RequestTitleChange`.
+- **RemoteEvent** for fire-and-forget pushes: `TitlesUpdated`, `Notice`, `QueueEffect`, `fromServer` (Notify), `Comm`/`Register` (Sound), `TouchGrass`.
+- **BindableEvent** for same-side (server-to-server or client-to-client) signaling that never crosses the network boundary: `ServerTitleChanged`, `clientBindable` (Notify).

@@ -1,0 +1,77 @@
+---
+title: "Player Data Layer"
+description: "ProfileStore-backed data framework: DataManager, DataApi, DataTemplate, and the read-only ClientDataApi."
+---
+
+## Architecture
+
+```
+SERVER (Authoritative)              CLIENT (Read-only)
+ServerScriptService.Data            ReplicatedStorage.ClientDataApi
+├── DataService   (ProfileStore lib)        │
+├── DataManager   (session lifecycle)       │  FetchDataRemote (RemoteFunction)
+├── DataTemplate  (default schema)          │
+└── DataApi       (Get/Set/Increment) ──────┘
+```
+
+The server always has authority over player data. The client can only *read* its own data through `ClientDataApi:GetMyData()` — there is intentionally no `:Set()` or `:Increment()` exposed to it.
+
+## DataService
+
+`ServerScriptService.Data.DataService` is the third-party [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) library (vendored in-repo). It is not custom game code — treat it as a dependency.
+
+## DataManager
+
+`ServerScriptService.Data.DataManager` owns the ProfileStore session lifecycle:
+
+- Creates the store: `DataManager.Store = ProfileStore.New("PlayerData", DataTemplate)`.
+- On `Players.PlayerAdded`, calls `StartSessionAsync("Player_<UserId>")`, cancelling the session if the player leaves before it loads.
+- Kicks the player with a friendly message if their profile fails to load, or if they are already signed in elsewhere (`OnSessionEnd`).
+- Caches live profiles in `DataManager.Profiles[player]` and ends the session on `PlayerRemoving`.
+
+## DataTemplate
+
+`ServerScriptService.Data.DataTemplate` is the single source of truth for the default shape of new player data:
+
+```lua
+local DataTemplate = {
+    DataVersion = 1.0,
+    FirstJoined = nil,
+    Minutes = 0,
+    Inventory = {},
+
+    Titles = { Owned = {}, Equipped = nil },
+    CountedTitles = {},
+    OverheadStyles = { Owned = {}, Equipped = nil },
+    Items = { Owned = {}, Equipped = nil },
+}
+```
+
+Any new currency, stat, or inventory category **must** be added here first — this is the project's stated convention (see the in-repo `Docs` script under `ServerScriptService.Data`).
+
+## DataApi (server)
+
+`ServerScriptService.Data.DataApi` is the only sanctioned way for other server scripts to touch player data:
+
+| Method | Purpose |
+|---|---|
+| `DataApi:GetData(player)` | Returns the player's full data table |
+| `DataApi:Get(player, key)` | Returns a single value |
+| `DataApi:Set(player, key, value)` | Overwrites a value |
+| `DataApi:Increment(player, key, amount)` | Safely adds/subtracts a numeric value |
+
+It also owns `ReplicatedStorage.FetchDataRemote` (a `RemoteFunction`), whose `OnServerInvoke` returns `DataApi:GetData(player)` — but only for the invoking player, so exploiters can't read other players' private data.
+
+## ClientDataApi (client)
+
+`ReplicatedStorage.Data.ClientDataApi` exposes exactly one method:
+
+```lua
+ClientDataApi:GetMyData() -- invokes FetchDataRemote, returns local player's data table
+```
+
+Any write-style action (buying an item, equipping a cosmetic) must go through a dedicated RemoteEvent/RemoteFunction that re-validates on the server — see [Cosmetics & Collections](/game-systems/cosmetics) and [Overhead Nametags & Titles](/game-systems/overhead-nametags) for concrete examples.
+
+<Warning>
+  Data may not be loaded the instant a player joins. Every consumer of `DataApi:Get()` in this codebase either polls until data exists (`while player.Parent and not data do task.wait() end`) or explicitly checks for `nil` before using the value.
+</Warning>

@@ -1,0 +1,16 @@
+---
+title: "TouchGrass Feature"
+description: "A joke / anti-AFK minigame that prompts a player to click a grass button a number of times."
+---
+
+## What it does
+
+`StarterGui.TouchGrasUI` is a self-contained client-side minigame triggered by the server firing `ReplicatedStorage.Network.Fun.TouchGrass` (a RemoteEvent) with an optional required-click count (defaults to 30 if omitted).
+
+**Flow (`StarterGui.TouchGrasUI.Scripts.Handler`):**
+
+1. Server fires `TouchGrass` (optionally with a custom `count`) → client opens a full-screen `CheckScreen` with blur (`UIBlur`) and suppresses other UI (`CloseOtherUI`).
+2. The player rapidly clicks a `GrassButton`; each click increments a counter (`"X / 30 Berührungen"`), triggers a glow flash, and plays an escalating shake animation (`shakeHeat` ramps up the faster the player clicks, capped, alternating left/right rotation).
+3. On reaching the target count, the UI fades to a `CompletedScreen` with a pop-in icon animation, holds for a few seconds, then closes and restores other UI/blur state.
+
+This reads as a light, humorous "go touch grass" anti-AFK / break-reminder gag common in Roblox hangout games, not a core progression system — it has no observed ties to `DataApi` or the cosmetics/currency systems.

@@ -16,6 +16,26 @@
           "index",
           "quickstart"
         ]
+      },
+      {
+        "group": "Game Architecture",
+        "pages": [
+          "game-systems/overview",
+          "game-systems/data-layer",
+          "game-systems/cosmetics",
+          "game-systems/overhead-nametags",
+          "game-systems/stats-playtime",
+          "game-systems/character",
+          "game-systems/party-games",
+          "game-systems/minigames",
+          "game-systems/environment",
+          "game-systems/notifications-sound",
+          "game-systems/touchgrass",
+          "game-systems/country-service",
+          "game-systems/admin-tools",
+          "game-systems/networking",
+          "game-systems/client-ui"
+        ]
       }
     ],
     "global": {

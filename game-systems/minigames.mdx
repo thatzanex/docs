@@ -1,0 +1,17 @@
+---
+title: "Interactive Objects"
+description: "The standalone Tic-Tac-Toe board rig under Workspace.Objects."
+---
+
+## Tic-Tac-Toe
+
+`Workspace.Objects.TicTacToePads.TicTacToe` is a fully self-contained physical minigame model:
+
+- **`Fields.Detectors`** — 9 touch/click detector parts, one per board cell.
+- **`Fields.X`** / **`Fields.O`** — 9 `UnionOperation` marker meshes each, toggled visible/invisible as moves are made.
+- **`Fields.Wins`** — win-line highlight geometry.
+- **`Board`** — the physical board mesh and grid lines.
+- **`Attachment`** — holds a `WinningSound` and a celebratory `ParticleEmitter` rig, plus a `BillboardGui` for status text.
+- **`System`** (Script) — the game logic tying the above together (cell state, turn order, win detection, resets).
+
+This is an isolated prop-style minigame (no ProfileStore/currency integration observed) — it's a physical, walk-up-and-play board rather than part of the account-progression loop.

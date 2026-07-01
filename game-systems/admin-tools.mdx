@@ -1,0 +1,49 @@
+---
+title: "Admin & Moderation Tools"
+description: "Cmdr console, Adonis, the rank-gated ModTeleport chat command, and the Ban Hammer tool."
+---
+
+## Shared permission model
+
+Staff permissions across the project are based on a single Roblox group, **`179209791`**, and a shared rank ladder rather than per-tool allowlists:
+
+| Rank threshold | Level name (German) | English equivalent |
+|---|---|---|
+| ≥ 2 | Ausbilder | Trainer |
+| ≥ 249–250 | Moderator | Moderator |
+| ≥ 252 | Administrator | Administrator |
+| ≥ 253 | Management | Management |
+| ≥ 254 | Owner (Developer tier) | Developer |
+| ≥ 255 | Owner | Owner |
+
+This same rank scheme also gates the `Mod`/`Admin`/`Developer`/`Owner` [overhead titles](/game-systems/overhead-nametags) (`MinRankId` 249/250/254/255) and the `!modtp` chat command (below) — group rank is the single source of truth for staff status project-wide.
+
+## Cmdr console
+
+`ServerScriptService.Cmdr` wraps the third-party [Cmdr](https://github.com/evaera/Cmdr) command console library (vendored under `ServerScriptService.Packages.Cmdr`):
+
+- **`loader`** registers default commands plus everything in `Commands`/`Types`/`Hooks`.
+- **`Commands`** ships a large built-in-admin command set: `Fly`, `Team`, `Ban`/`Unban`/`Banid`, `PermBan`, `kick`, `kill`, `respawn`, `refresh`, `Heal`, `God`/`Ungod`, `teleport`, `Give`, `Announcement`, `Spectate`, `Tools`.
+- **`Hooks.Permissions`** — the `BeforeRun` hook shown above; denies any command whose `context.Group` requirement exceeds the executor's rank-derived level (falls back to level 3 for the generic `"DefaultAdmin"` group). The header comment literally reads *"BITTE DIESEN SCRIPT NICHT ANFASSEN!!!"* ("please do not touch this script!!!") — treat changes to this file with extra care.
+- **`Hooks.Logging`** — presumably audit-logs command execution (not detailed here).
+
+The client half (`StarterPlayer.StarterPlayerScripts.Cmdr`) loads the Cmdr console UI for authorized players.
+
+## Adonis
+
+`ServerScriptService.Game.Admin.Adonis` is a vendored instance of the popular [Adonis](https://github.com/Epix-Incorporated/Adonis) admin suite (Configuration + supporting Folder/NumberValue), providing a second, more full-featured admin panel alongside Cmdr.
+
+## ModTeleport
+
+`ServerScriptService.Game.Admin.ModTeleport` is a tiny, self-contained chat-command teleport:
+
+```lua
+-- "!modtp" teleports the sender to Workspace.Systems.ModTeleport.ModTeleport
+-- gated to ranks {249, 250, 254, 255} in group 179209791
+```
+
+It listens on `Player.Chatted`, matches `^!modtp%s*$` case-insensitively, and checks the sender's live group rank via `GetRankInGroupAsync` before pivoting their character to the teleport part.
+
+## Ban Hammer
+
+`ServerStorage.Tools."Ban Hammer"` is a physical `Tool` (mesh handle with swing/ban sound effects, a particle trail, and R6/R15 swing animations under its `Server` script) — a melee-style admin tool, likely triggering a ban/kick on hit via its `Server` script.

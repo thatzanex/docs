@@ -1,0 +1,25 @@
+---
+title: "Stats & Playtime Tracking"
+description: "How playtime minutes are tracked server-side and mirrored into a physical PlayerStats folder for the client."
+---
+
+## PlayerStats folder
+
+`ServerScriptService.Game.Stats.StatsService` waits for each player's `DataApi` profile to load, then builds a physical `Folder` named `PlayerStats` parented under the `Player` instance:
+
+- `FirstJoined` (`StringValue`) — human-readable join date (`os.date("%B %d, %Y", ...)`), set once via `DataApi:Set(player, "FirstJoined", os.time())` if missing.
+- `Minutes` (`NumberValue`) — mirrors `DataApi:Get(player, "Minutes")`.
+
+The folder is parented **last**, after both values exist, so clients never observe a half-built folder.
+
+## Playtime tracker loop
+
+A single `task.spawn` loop ticks every 60 seconds and, for every player with loaded data:
+
+1. `DataApi:Increment(player, "Minutes", 1)`
+2. Reads back the new total and pushes it into the physical `PlayerStats.Minutes` value.
+3. Calls into the (now centralized) title-eligibility check — see [Overhead Nametags & Titles](/game-systems/overhead-nametags), which actually owns awarding titles based on this value (`StatsService`'s own `CheckTimeTitles` is a stub / no-op, left as an integration point).
+
+## Why a physical Value at all?
+
+`StarterPlayer.StarterPlayerScripts.Character.StateBillboardClient` and the nametag styles' `Minutes` label read this value directly via normal Roblox replication (`PlayerStats:WaitForChild("Minutes")`), rather than round-tripping through `ClientDataApi`. It's a lightweight way to get real-time replication of one frequently-changing number without needing a remote event per tick.

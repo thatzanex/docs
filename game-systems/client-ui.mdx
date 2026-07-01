@@ -1,0 +1,31 @@
+---
+title: "Client UI"
+description: "StarterGui surfaces: HUD, nametag/titles browser, the (disabled) shop, and notification overlays."
+---
+
+## HUD
+
+`StarterGui.HUD` is the always-on heads-up display:
+
+- **`HUDFrame.Bars`** — `REP` and `Money` currency/reputation readouts.
+- **`HUDFrame.ButtonHolder`** — quick-access buttons: `OverheadStyles` (style picker), `Shop`, `Settings`, plus a generic `Button4` slot. `ButtonEffects` (LocalScript) drives their hover/press feedback.
+- **`NametagFrame`** — a searchable list (`TitlesTab.Search` + `TitlesHolder` `ScrollingFrame`) of unlocked/locked titles, driven by `TitlesClient` (LocalScript) talking to the `GetTitles`/`EquipTitle`/`TitlesUpdated` remotes described in [Overhead Nametags & Titles](/game-systems/overhead-nametags).
+
+## Shop (currently disabled)
+
+`StarterGui."PopShop [disabled]"` is a fully built-out shop UI — Robux tab, Gadgets tab, Emojis tab, Cosmetics tab, a gifting flow (`GiftingBox` with player-select + gift-select steps), and an info panel — but its name marks it explicitly disabled, i.e. not currently live/reachable in the shipped experience.
+
+## Notifications
+
+`StarterGui.Notifications` renders the general-purpose [Notify toast system](/game-systems/notifications-sound) (`LocalNotifications` LocalScript + a `ScrollingFrame` list). `StarterGui.Stuhltanz` is a separate, game-specific overlay (`StuhltanzClient` + its own `Notifications` frame) purely for musical-chairs round announcements — kept isolated from the general Notify system by design.
+
+## TouchGrass UI
+
+`StarterGui.TouchGrasUI` — see [TouchGrass Feature](/game-systems/touchgrass) for the full click-minigame flow it implements.
+
+## StarterPlayerScripts
+
+- **`Cmdr`** (LocalScript) — loads the Cmdr console client.
+- **`Character.StateBillboardClient`** — renders the character status-indicator billboard (paired with the server's `StatesBillboardServer`).
+- **`Enviroment.LocalLighting`** — builds the actual Lighting/Atmosphere/Sky instances client-side from `SharedStorage.Lighting` presets, reacting to the server's `CurrentLighting` value (see [Environment](/game-systems/environment)).
+- **`Sound.SoundClient`** — listens for the `Register`/`Comm` remotes from the [Sound API](/game-systems/notifications-sound) and actually preloads/plays sounds locally.

@@ -1,0 +1,18 @@
+---
+title: "Country Service"
+description: "Flag/emoji lookup library used to decorate player nametags with their country."
+---
+
+## Purpose
+
+`ReplicatedStorage.Libraries.CountryService` is a small OOP library that models a `Country` (`Code`, `Name`, `Emoji`, `Decal`) and exposes a lookup (`CountryService:GetMyCountry()`) used to populate the `CountryHolder`/`CountryDecal` elements present in every [overhead nametag style](/game-systems/overhead-nametags).
+
+```lua
+local CountryService = require(ReplicatedStorage.CountryService)
+local country = CountryService:GetMyCountry()
+
+countryFlag.Image = country.decal
+countryInfo.Text = `Hi! Welcome from {country.name} {country.emoji}`
+```
+
+`CountryService.Data` (a sibling `ModuleScript`) holds the actual per-country table backing this lookup. `ReplicatedStorage.Network.Overhead.Modules.CountryManager` is the integration point that wires country display into the overhead nametag rendering pipeline.
