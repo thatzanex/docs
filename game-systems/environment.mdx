@@ -1,0 +1,35 @@
+---
+title: "Environment"
+description: "Map layout, mood-lighting synchronization, and beam-effect teleporters."
+---
+
+## Map layout
+
+`Workspace.Map` contains the hangout's built environment:
+
+- **`Assets.Structure`** — roof, floor planks, side planks, staircase (modular building pieces).
+- **`Assets.Probs`** — tables (small/large), fountains, sofas, lanterns.
+- **`Assets.ForestHangout`** — lantern clusters and forest set-dressing models.
+- **`Assets.Environment assets`** — foliage, rocks, fencing.
+- **`InvisibleBorder`** — invisible boundary walls.
+
+`Workspace.Objects` holds interactive/teleport props separately from static set-dressing: `TicTacToePads`, `LightingTeleport` (6 numbered teleporter pairs), and `WaterTeleport` (a swimmable water zone with a safe zone part and decorative water props — lily pads, waterfall, sea).
+
+## Lighting synchronization
+
+`ServerScriptService.Game.Enviroment.LightingServer` is intentionally minimal: it ensures `Lighting:GetAttribute("ServerForceOverride")` defaults to `false` and exposes a `CurrentLighting` StringValue as the single source of truth for the active lighting preset name. Per the script's own comments:
+
+- Setting `CurrentLighting.Value` picks a lighting preset (e.g. `"Chill Vibe"`).
+- Setting `Lighting:SetAttribute("ServerForceOverride", true)` forces that preset on all clients (e.g. during an event), overriding individual client preferences.
+- Setting it back to `false` returns control to each client's local lighting choice.
+
+The actual lighting *objects* (Sky, Atmosphere, PostEffects, etc.) are spawned client-side by `StarterPlayer.StarterPlayerScripts.Enviroment.LocalLighting`, reading from `ReplicatedStorage.SharedStorage.Lighting.Server`/`.Client` preset folders — the server script deliberately does not build lighting instances itself.
+
+## Teleporters
+
+Two networked teleporter systems live in `ServerScriptService.Game.Enviroment.Teleporters`:
+
+- **`LightningTeleporters`** — pairs of `PadA`/`PadB` parts (see `Workspace.Objects.LightingTeleport`), each with `Point` (particle attachment) and `BeamA`/`BeamB` (visual beam) attachments for a lightning-teleport visual effect between linked pads.
+- **`WaterSafeTeleport`** — moves players between the main map and the `WaterTeleport` swimming area, respecting a `WaterSafeZone` part.
+
+Cosmetic-only teleport pads also exist under `Workspace.Objects.LightingTeleport.Teleporter_ID_001`–`006`, each a matched `PadA`/`PadB` set with particle/beam attachments, likely used for scenic biome-hopping around the map.

@@ -1,0 +1,50 @@
+---
+title: "Overhead Nametags & Titles"
+description: "BillboardGui nametag styles, playtime/staff titles, and DataStore-backed global owner counts."
+---
+
+## Overview
+
+Every character gets a floating nametag (`BillboardGui`) attached to its `HumanoidRootPart`, named `Overhead`. The nametag's *style* (visual skin) and *title* (small colored label like "King" or "Mod") are both independently selectable cosmetics.
+
+## OverheadController
+
+`ReplicatedStorage.Network.Overhead.Modules.OverheadController` is the shared module both server and client code call into:
+
+- `ApplyOverhead(char, player)` — picks the player's equipped style (or falls back to `DefaultStyle`), clones its template onto `HumanoidRootPart`, and runs that style's `Apply` function. Styles can be either a `ModuleScript` (custom template + `Apply` logic) or a plain `BillboardGui` (visuals only, borrowing `DefaultStyle`'s logic) — a "hybrid" pattern that lets simple styles skip writing code.
+- `SetPlayerStyle` / `SetGlobalStyle` — per-player and server-wide default style overrides.
+- `SetPlayerTitle(player, titleId)` / `UpdateTitleUI` — updates the `Title` TextLabel's text and `UIGradient` inside the nametag, instantly, if the character already exists.
+
+15 styles ship in `ReplicatedStorage.Network.Overhead.Styles` (Sunset, Midnight, Leaf, Aurora, Ocean, Fire, Royal, Summertime, Crimson, Robux, Watermelon, Cyber, YingYang, Galaxy, Lemon), each a `BillboardGui` with `InformationHolder` (name/title/minutes/emoji text) and, for several, an `EffectHolder` running a small particle script.
+
+## OverheadServer
+
+`ServerScriptService.Game.Overhead.OverheadServer` just wires `Player.CharacterAdded` to `OverheadController.ApplyOverhead` — it's the bootstrap, not the logic.
+
+## Api/Overhead — style & title change remotes
+
+`ServerScriptService.Api.Overhead` creates two `RemoteFunction`s:
+
+- **`RequestStyleChange`** — validates the style exists and that `profile.OverheadStyles:Has(styleName)` before equipping and re-rendering the nametag. Supports `nil`/`"RESET"` to revert to default.
+- **`RequestTitleChange`** — same pattern for titles, checking `profile.Titles:Has(titleName)`.
+
+Both return `{ Success, Message, ErrorMessage }` so the client UI can show validation errors without trusting anything client-side.
+
+## TitleService — unlock rules & global counts
+
+`ServerScriptService.Game.Overhead.TitleService` is the most involved script in this system:
+
+- **Two title categories:**
+  - *Playtime titles*, sourced from `TimeTitles` (a minutes-threshold list) and gated purely by `player.Minutes >= RequiredMinutes`.
+  - *Staff titles*, sourced from `TitleDefinitions` entries that carry a `GroupId`/`MinRankId`, gated by `player:GetRankInGroupAsync(GroupId) >= MinRankId` (group `179209791`).
+- **Global owner counts**: a `DataStoreService` store (`OverheadTitleOwnerCounts`) tracks how many players have ever owned each title, shown in the UI as "X players own this." Counts are incremented exactly once per player per title (tracked via the `CountedTitles` data field) to avoid double counting across sessions.
+- **Award loop**: on join, and whenever `PlayerStats.Minutes` changes, `awardEligibleTitles` grants any newly-eligible titles via `profile.Titles:Give(...)` and pushes a fresh payload to the client over `TitlesUpdated`.
+- **Remotes**: `GetTitles` (RemoteFunction, full title list + ownership + counts), `EquipTitle` (RemoteEvent, validates ownership before equipping), `TitlesUpdated` (pushes state to a client), `ServerTitleChanged` (BindableEvent for other server systems to react to a title change).
+
+### Title catalog (`TitleDefinitions` + `TimeTitles`)
+
+Playtime titles unlock on a fixed minutes ladder (10 min → "Newbie" up to 1200 min → "daydreamer"/"aura farmer"), each with an optional color gradient. Staff titles (`Mod`, `Admin`, `Developer`, `Owner`) require Roblox group rank ≥ 249/250/254/255 respectively in group `179209791`.
+
+## Country flag integration
+
+Several styles include a `CountryHolder` frame with a `CountryDecal` image, populated via the [Country Service](/game-systems/country-service) so nametags can show a player's flag/emoji.

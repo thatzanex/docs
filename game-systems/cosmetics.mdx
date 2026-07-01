@@ -1,0 +1,57 @@
+---
+title: "Cosmetics & Collections Framework"
+description: "The generic Owned/Equipped collection class reused for Titles, Overhead Styles, and Items."
+---
+
+## Why a generic framework
+
+Instead of writing separate ownership/equip logic for every cosmetic category, the game uses one reusable class, `CollectionClass`, parameterized by category name. `ServerCosmeticsAPI` then hands out one `Collection` instance per category per player.
+
+```lua
+-- ServerScriptService.Game.Player.Cosmetics.ServerCosmeticsAPI
+function ServerCosmeticsAPI.GetProfile(player)
+    if not activeProfiles[player] then
+        activeProfiles[player] = {
+            Titles = Collection.new(player, "Titles"),
+            OverheadStyles = Collection.new(player, "OverheadStyles"),
+            Items = Collection.new(player, "Items"),
+        }
+    end
+    return activeProfiles[player]
+end
+```
+
+Adding a new cosmetic category (e.g. `Trails`) is a one-line change here plus a matching entry in `DataTemplate`.
+
+## CollectionClass API
+
+`ServerScriptService.Game.Player.Cosmetics.CollectionClass` wraps a `{ Owned = {}, Equipped = nil }` table stored via `DataApi`:
+
+| Method | Behavior |
+|---|---|
+| `Give(itemId)` | Adds to `Owned` if not already present. Returns `false` if already owned. |
+| `Take(itemId)` | Removes from `Owned`; clears `Equipped` if it was the equipped item. |
+| `Equip(itemId)` | Sets `Equipped`, but only if the item is in `Owned`. |
+| `Unequip()` | Clears `Equipped`. |
+| `Has(itemId)` | Ownership check. |
+| `Reset()` | Wipes the category back to defaults. |
+
+## Bootstrapper
+
+`ServerScriptService.Game.Player.Cosmetics.Bootstrapper` initializes a profile in memory on `PlayerAdded` (`ServerCosmeticsAPI.GetProfile`) and frees it on `PlayerRemoving` (`ServerCosmeticsAPI.RemoveProfile`) to avoid memory leaks. It's also the natural place to grant default/starter cosmetics.
+
+## Client read access
+
+`ReplicatedStorage.Api.CosmeticClient` mirrors the read side for LocalScripts, going through `ClientDataApi` (never direct DataStore/data access):
+
+```lua
+CosmeticClient:GetTitles()
+CosmeticClient:GetOverheadStyles()
+CosmeticClient:GetItems()
+CosmeticClient:GetEquipped(categoryName)
+CosmeticClient:HasItem(categoryName, itemId)
+```
+
+## Admin shortcuts
+
+`ServerScriptService.Game.Player.Cosmetics.TitleCommand` and `StylesCommand` are staff-facing scripts (invoked through Cmdr — see [Admin & Moderation](/game-systems/admin-tools)) for manually granting/equipping cosmetics without touching data directly.

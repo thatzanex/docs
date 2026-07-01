@@ -1,0 +1,20 @@
+---
+title: "Character Setup"
+description: "Default asset attachment on spawn and player-vs-player collision handling."
+---
+
+## CharacterInit — default asset attachment
+
+`ServerScriptService.Game.Character.CharacterInit` listens for `Player.CharacterAdded` and:
+
+1. Disables the default Roblox health bar and name display (`HumanoidDisplayDistanceType = None`, `HealthDisplayType = AlwaysOff`) — the game renders its own nametag via the [Overhead system](/game-systems/overhead-nametags) instead.
+2. Clones every child of `ReplicatedStorage.Network.Character.default` onto the new character, using a `Path` attribute on each asset to decide where it goes (`"Char"`/`"Character"` means the character model root itself; anything else is looked up as a child name via `FindFirstChild`).
+3. Adds an `InitComplete` `BoolValue` to the character once done, so other systems can safely wait on it before assuming default assets are present.
+
+## RemovePlayerCollisions
+
+A short `PhysicsService` script that puts every player's body parts into a `"plrs"` collision group and disables self-collision within that group (`CollisionGroupSetCollidable("plrs", "plrs", false)`), so players can walk through each other — standard for social/hangout games with many players in a small area.
+
+## State billboard (server/client pair)
+
+`ServerScriptService.Game.Character.StatesBillboardServer` and `StarterPlayer.StarterPlayerScripts.Character.StateBillboardClient` implement a small overhead status-indicator system (separate from the main nametag), networked through `ReplicatedStorage.Network.Character.StateBillboardNetwork`.

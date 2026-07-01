@@ -1,0 +1,34 @@
+---
+title: "Notifications & Sound API"
+description: "The toast notification system (VirtualVogue-style) and a preload-then-play networked Sound API."
+---
+
+## Notify (toast notifications)
+
+`ReplicatedStorage.Network.Notify` implements a small, config-driven toast system:
+
+- **`Config`** — defines presets (`Error`, `Notification`, `Success`, `Information`, `Code`), each with an icon asset id, accent color, optional preset-specific sound, and shared in/out `TweenInfo`s. A `DefaultSound` plays for presets without one configured.
+- **`Template`** (Script) — the toast's visual template/behavior.
+- **`fromServer`** (RemoteEvent) — server-to-client push of a toast.
+- **`clientBindable`** (BindableEvent) — lets other client-side scripts trigger a toast locally without a round-trip.
+
+`StarterGui.Notifications.LocalNotifications` renders incoming toasts into a `Holder` frame inside a `ScrollingFrame`.
+
+<Info>
+  This is a distinct system from Stuhltanz's own `Notice` RemoteEvent (game-specific round announcements) — Notify is the general-purpose, game-wide toast system.
+</Info>
+
+## Sound API
+
+`ServerScriptService.Api.ClientSound` (a strict, typed `--!strict` module) exposes a tiny networked sound API over `ReplicatedStorage.Network.Sound`:
+
+```lua
+export type SoundConfig = { SoundId: string, Volume: number?, PlaybackSpeed: number?, Looped: boolean? }
+
+SoundAPI.RegisterForPlayer(player, soundId)  -- pre-registers/preloads a sound for one player
+SoundAPI.RegisterForAll(soundId)             -- preloads for everyone
+SoundAPI.PlayForPlayer(player, config)       -- plays for one player
+SoundAPI.PlayForAll(config)                  -- plays for everyone
+```
+
+The `Register` step exists specifically to eliminate first-play audio latency — sounds are loaded on the client ahead of time via the `Register` RemoteEvent, then triggered later via `Comm`. `StarterPlayer.StarterPlayerScripts.Sound.SoundClient` is the client-side listener for both remotes.

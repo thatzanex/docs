@@ -1,0 +1,76 @@
+---
+title: "Architecture Overview"
+description: "High-level tour of the Jugendtreff Roblox experience: server/client split, folder layout, and how systems talk to each other."
+---
+
+## What this is
+
+Jugendtreff is a Roblox social "hangout" experience: a forest clearing map with benches, a fountain, party minigames (musical chairs, spin-the-bottle, tic-tac-toe), a cosmetics/vanity progression loop (playtime-based titles, nametag styles), and a staff moderation stack (Cmdr, Adonis, custom rank-gated tools).
+
+<Note>
+  One module, `ServerScriptService.Data.SecretService` (and its sibling under `ServerScriptService.SecretService`), is intentionally **excluded** from this documentation set. It was not read, inspected, or summarized as part of this pass, per project instructions.
+</Note>
+
+## Server/Client split
+
+The game follows a strict **server-authoritative** model:
+
+- **`ServerScriptService`** — all game logic that can affect data, economy, or fairness. Nothing here is trusted to the client.
+- **`ReplicatedStorage`** — shared modules, RemoteEvents/RemoteFunctions, and read-only client APIs.
+- **`StarterPlayer`** (`StarterPlayerScripts` / `StarterCharacterScripts`) — client-side presentation: HUD, local lighting, sound playback, Cmdr console.
+- **`StarterGui`** — screen GUIs (HUD, Notifications, Shop, Stuhltanz overlay, "TouchGrass" minigame UI).
+- **`Workspace.Systems`** / **`Workspace.Objects`** — physical minigame rigs (bottles, chairs, tic-tac-toe board, teleport pads).
+
+## Top-level map of systems
+
+<CardGroup cols={2}>
+  <Card title="Player Data" href="/game-systems/data-layer" icon="database">
+    ProfileStore-backed save data, the only source of truth for currencies, inventories, and unlocks.
+  </Card>
+  <Card title="Cosmetics & Collections" href="/game-systems/cosmetics" icon="shirt">
+    Generic "Owned/Equipped" collection framework reused for Titles, Overhead Styles, and Items.
+  </Card>
+  <Card title="Overhead Nametags & Titles" href="/game-systems/overhead-nametags" icon="id-badge">
+    Billboard-based nametag styles and playtime/staff-rank titles with server-tracked global owner counts.
+  </Card>
+  <Card title="Stats & Playtime" href="/game-systems/stats-playtime" icon="clock">
+    Per-minute playtime tracking that feeds the title-unlock system.
+  </Card>
+  <Card title="Character Setup" href="/game-systems/character" icon="person">
+    Default asset attachment and player-vs-player collision handling.
+  </Card>
+  <Card title="Party Games" href="/game-systems/party-games" icon="masks-theater">
+    Stuhltanz (musical chairs) round controller and the Spin-the-Bottle click minigame.
+  </Card>
+  <Card title="Interactive Objects" href="/game-systems/minigames" icon="grid-3x3">
+    Standalone tic-tac-toe board with win-detection and effects.
+  </Card>
+  <Card title="Environment" href="/game-systems/environment" icon="tree">
+    Map layout, mood-lighting sync, and beam-effect teleporters.
+  </Card>
+  <Card title="Notifications & Sound" href="/game-systems/notifications-sound" icon="bell">
+    Toast notification system and a preload-then-play networked Sound API.
+  </Card>
+  <Card title="TouchGrass Feature" href="/game-systems/touchgrass" icon="leaf">
+    A joke/anti-AFK "go outside" minigame triggered from the server.
+  </Card>
+  <Card title="Country Service" href="/game-systems/country-service" icon="flag">
+    Flag/emoji lookup library used by nametag styles.
+  </Card>
+  <Card title="Admin & Moderation" href="/game-systems/admin-tools" icon="shield-halved">
+    Cmdr console, Adonis, rank-gated ModTeleport, and the Ban Hammer tool.
+  </Card>
+  <Card title="Networking Layout" href="/game-systems/networking" icon="network-wired">
+    How `ReplicatedStorage.Network` is organized per-system.
+  </Card>
+  <Card title="Client UI" href="/game-systems/client-ui" icon="window-restore">
+    HUD, nametag search UI, shop (disabled), and notification surfaces.
+  </Card>
+</CardGroup>
+
+## Core design rules observed in the codebase
+
+1. **Never trust the client.** Every purchase/unlock/equip flow goes `Client → RemoteEvent/RemoteFunction → Server`, and the server re-validates ownership before mutating data.
+2. **Data lives in one place.** `DataApi` (server) and `ClientDataApi` (client, read-only) are the only sanctioned entry points into player data — no other script reads/writes ProfileStore directly.
+3. **Collections are generic.** Titles, Overhead Styles, and Items all reuse the same `CollectionClass` (`Give` / `Take` / `Equip` / `Unequip` / `Has`) instead of bespoke per-category code.
+4. **Staff permissions are rank-based**, sourced from a single Roblox group (`179209791`), with a shared rank→level table reused by both Cmdr hooks and title eligibility checks.
